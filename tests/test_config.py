@@ -42,3 +42,19 @@ def test_path_from_env(tmp_path):
     p = _write(tmp_path, {"ntfy_topic": "envtopic"})
     cfg = load_config(env={"CC_POKE_CONFIG": str(p)})
     assert cfg.ntfy_topic == "envtopic"
+
+
+def test_path_arg_beats_env(tmp_path):
+    p1 = _write(tmp_path, {"ntfy_topic": "from-arg"})
+    sub = tmp_path / "other"
+    sub.mkdir()
+    p2 = sub / "config.json"
+    p2.write_text(json.dumps({"ntfy_topic": "from-env"}), encoding="utf-8")
+    cfg = load_config(path=p1, env={"CC_POKE_CONFIG": str(p2)})
+    assert cfg.ntfy_topic == "from-arg"
+
+
+def test_whitespace_topic_raises(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "   "})
+    with pytest.raises(ConfigError):
+        load_config(path=p)

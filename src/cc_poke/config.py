@@ -41,8 +41,10 @@ def load_config(
     if not isinstance(data, dict):
         raise ConfigError(f"cc-poke config at {p} must be a JSON object")
     topic = data.get("ntfy_topic")
-    if not topic:
+    if topic is None:
         raise ConfigError(f'cc-poke config at {p} is missing required "ntfy_topic"')
+    if not str(topic).strip():
+        raise ConfigError(f'cc-poke config at {p} has an empty "ntfy_topic"')
     server = str(data.get("ntfy_server", "https://ntfy.sh")).rstrip("/")
     adapter = str(data.get("adapter", "ntfy"))
     return Config(ntfy_server=server, ntfy_topic=str(topic), adapter=adapter)
