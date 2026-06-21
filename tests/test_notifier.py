@@ -67,3 +67,12 @@ def test_main_bad_stdin_returns_zero_and_uses_default_message(tmp_path, monkeypa
     monkeypatch.setattr("sys.stdin", io.StringIO("not-json{{{"))
     assert notifier.main() == 0
     assert fake.sent == [("cc-poke: Claude needs you", "Claude is waiting for you")]
+
+
+def test_main_push_failure_still_returns_zero(tmp_path, monkeypatch):
+    fake = FakeAdapter(result=False)
+    monkeypatch.setenv("CC_POKE_CONFIG", str(_config_file(tmp_path)))
+    monkeypatch.setattr(notifier, "make_adapter", lambda cfg: fake)
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps({"message": "x"})))
+    assert notifier.main() == 0
+    assert len(fake.sent) == 1

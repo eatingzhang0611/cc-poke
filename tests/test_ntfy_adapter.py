@@ -27,6 +27,7 @@ def test_send_posts_to_topic_url_and_returns_true():
     assert call["url"] == "https://ntfy.sh/topic123"
     assert call["headers"]["Title"] == "cc-poke"
     assert call["data"] == "Claude is waiting".encode("utf-8")
+    assert call["timeout"] == 10.0
 
 
 def test_send_returns_false_on_non_2xx():
