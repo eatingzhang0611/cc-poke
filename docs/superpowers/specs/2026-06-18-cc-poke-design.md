@@ -1,7 +1,14 @@
 # cc-poke — 设计文档
 
-> 状态：待 review（2026-06-18 撰写）
+> 状态：已 review；命门探针已跑（2026-06-21），档1 改走 PreToolUse hook。
 > 项目名 `cc-poke` 为占位名，最终名待定。
+>
+> **2026-06-21 更新（命门探针结论）**：实测 Claude Code 2.1.185，`--permission-prompt-tool`
+> 在**交互式 TUI 里被忽略**（只 headless/`-p` 生效），故 spec 原本的「MCP bridge +
+> `--permission-prompt-tool`」方案对本项目（Termius 交互式场景）无效。**改用 `PreToolUse`
+> hook**：实测 hook 在交互式 TUI 能拦截工具调用、绕过审批弹窗、由我们返回
+> `permissionDecision: allow|deny`，且可配 `timeout` 阻塞数分钟等手机回传。下文 §4.3、§6
+> 已据此更新。验证物料见 `spike/`。
 
 ## 1. 背景与动机
 
@@ -27,7 +34,7 @@
 
 | 决策 | 结论 | 理由 |
 |------|------|------|
-| 形态 | Claude Code 插件（hook + MCP）+ 小型本地服务 | 自托管、零第三方信任、可进 plugin marketplace |
+| 形态 | Claude Code 插件（hooks：Notification + PreToolUse）+ 小型本地服务 | 自托管、零第三方信任、可进 plugin marketplace。注：档1 经探针改为 PreToolUse hook，不再用 MCP/`--permission-prompt-tool`（交互式无效） |
 | 推送通道 | 可插拔 adapter，**首实现 ntfy** | ntfy 纯开源可自托管，且原生支持免开 App 的 http 动作按钮，把档1 回传命门压力降到最低 |
 | 第二通道 | Bark（紧随其后） | iOS 原生推送手感最好，适合档0 通知体验 |
 | 排除通道 | Pushover | 闭源、不能自托管，与开源/零信任定位冲突 |
@@ -41,7 +48,7 @@
 │                                                  │
 │  Claude Code ──(Notification hook)──> notifier   │  档0
 │       │                                  │       │
-│       └─(--permission-prompt-tool)─> MCP bridge   │  档1
+│       └─(PreToolUse hook)──────> approval bridge  │  档1
 │                                          │       │
 │                              push adapter (ntfy)  │
 │                              + decision webhook    │
@@ -67,11 +74,12 @@
 - **依赖**：外部推送服务（ntfy server，可自托管）。
 - **首实现**：ntfy。预留 Bark adapter 接口。
 
-### 4.3 MCP bridge（档1 核心）
-- **做什么**：作为 `--permission-prompt-tool` 注册给 Claude Code。收到权限请求 → 生成 `request_id` → 经 adapter 推一条带"批准/拒绝"动作的通知 → **阻塞等待**手机回传 → 把决定（allow/deny）返回给 Claude。
-- **怎么用**：通过 `claude --permission-prompt-tool <this-mcp-tool>` 启用。
+### 4.3 approval bridge（档1 核心，PreToolUse hook）
+- **做什么**：作为 `PreToolUse` hook 注册给 Claude Code。工具执行前被触发 → 生成 `request_id` → 经 adapter 推一条带"批准/拒绝"动作的通知 → **阻塞等待**手机回传 → 返回 `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"|"deny"}}` 给 Claude（绕过终端审批弹窗）。
+- **怎么用**：在 settings 的 `hooks.PreToolUse` 配置 command（可按 `matcher` 选工具，如只拦 `Bash`/`Edit` 等）。
 - **依赖**：push adapter、decision store。
-- **关键参数**：等待超时（默认 5 分钟，可配）。
+- **关键参数**：hook `timeout`（需设大，如 300s，否则默认 60s 会在等手机时被杀）；等待超时到了返回 deny 或交还终端。
+- **实测要点（2026-06-21，CC 2.1.185）**：交互式 TUI 下 hook 正常触发，`permissionDecision:allow` 能绕过弹窗；hook 收到完整 `{tool_name, tool_input}`；配 `timeout` 后可如实阻塞数分钟。原 `--permission-prompt-tool` 方案在交互式无效，已弃用。
 
 ### 4.4 decision webhook（档1 回传）
 - **做什么**：极简 HTTP 端点 + 极简网页。手机点按钮打到这里，记录决定到 decision store，唤醒阻塞中的 MCP bridge。
@@ -89,27 +97,27 @@ Claude 需要你 → Notification hook 触发 → notifier
 
 ### 档1 · 远程批准
 ```
-Claude 要权限 → MCP bridge 收到 → 生成 request_id
+Claude 要用工具 → PreToolUse hook 触发 → 生成 request_id
   → adapter.send(带 批准/拒绝 按钮, 指向 webhook?id=xxx)
-  → MCP bridge 阻塞轮询 decision store
+  → hook 阻塞轮询 decision store（hook timeout 设大，如 300s）
 手机点"批准" → webhook 记录 decision[xxx]=allow
-  → MCP bridge 读到 → 返回 {allow} 给 Claude → Claude 继续
+  → hook 读到 → 返回 permissionDecision:allow 给 Claude → Claude 继续（不弹终端弹窗）
 ```
 
 回传基线：点通知 → 打开极简网页 → 点批准/拒绝。
 ntfy 通道升级：通知上原生双按钮，免开 App 直接打 webhook。
 
-## 6. 命门探针（Phase 2 实现前的 go/no-go 关卡）
+## 6. 命门探针 ✅ 已完成（2026-06-21）
 
-**实现档1 前，先用 0.5–1 天单独验证一件事**：在 Termius 的**交互式 `claude` 会话**里，`--permission-prompt-tool` 是否真的会把权限请求转给 MCP，而不是仍走终端 TUI 弹窗。
+**问题**：在 Termius 的**交互式 `claude` 会话**里，能否在工具执行前拦截权限请求并由我们裁决（而非弹终端 TUI）。
 
-- **背景风险**：`--permission-prompt-tool` 主要为 headless / SDK 模式设计；交互式 TUI 是否走这条路径未经验证，这是整个档1 价值的命门。
-- **探针做法**：写一个最小 MCP，权限请求来了就 log + 固定返回 allow，观察交互式会话是否真的走它。
-- **结果分支**：
-  - **成功** → 档1 按本设计实现。
-  - **失败** → 触发 Plan B：档1 改为 headless 会话托管模式（工作量升级、定位变"轻量会话托管"），或档1 砍掉、稳定停在档0。
+**探针结果**（CC 2.1.185，物料见 `spike/`）：
+- ❌ **`--permission-prompt-tool`（原方案）在交互式 TUI 里被忽略**——MCP 被加载（有 `initialize`/`tools/list`）但权限请求从不走它（0 个 `tools/call`），仍弹终端审批弹窗。只在 `-p`/headless 生效。
+- ✅ **改用 `PreToolUse` hook 成功**：交互式 TUI 下 hook 触发、拿到完整 `{tool_name, tool_input}`、返回 `permissionDecision:allow` 直接绕过弹窗；配 `timeout` 后可阻塞数分钟等手机回传（实测 7s 阻塞被如实等待）。
 
-此关卡在 Phase 2 启动时必须先过。
+**结论**：档1 可行，按 PreToolUse hook 路线实现（§4.3）。Plan B（headless 会话托管）不需要了。
+
+> 历史失败分支（保留备查）：若 hook 路线当初也失败，则 Plan B = headless 会话托管（工作量升级、定位变"轻量会话托管"），或档1 砍掉停在档0。
 
 ## 7. 错误处理
 
@@ -128,7 +136,7 @@ ntfy 通道升级：通知上原生双按钮，免开 App 直接打 webhook。
 ## 9. 分期落地
 
 - **Phase 1（先做）**：档0 notifier + ntfy adapter + Notification hook 配置 + README。交付即用。
-- **Phase 2**：命门探针 → 成则 MCP bridge + decision webhook + 极简网页，完成档1。
+- **Phase 2**：命门探针 ✅ 已过（hook 路线）→ PreToolUse approval bridge + decision webhook + 极简网页，完成档1。
 - **Phase 3（可选/以后）**：Bark adapter；档2 原生灵动岛留给社区。
 
 ## 10. 开源维护边界（写进 README）
