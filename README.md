@@ -32,7 +32,7 @@ python3 -m venv .venv
 ## 验证
 
 ```bash
-echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | .venv/bin/cc-poke-notify
+echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | /home/yd/workspace/cc-poke/.venv/bin/cc-poke-notify
 ```
 手机应收到一条标题为 `cc-poke: Claude needs you`、正文含 `hello from cc-poke` 的通知。
 
