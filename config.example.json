@@ -1,0 +1,5 @@
+{
+  "ntfy_server": "https://ntfy.sh",
+  "ntfy_topic": "REPLACE-with-a-long-random-topic-you-keep-secret",
+  "adapter": "ntfy"
+}
