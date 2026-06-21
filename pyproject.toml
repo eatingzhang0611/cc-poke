@@ -1,0 +1,19 @@
+[project]
+name = "cc-poke"
+version = "0.1.0"
+description = "Push Claude Code approval/notification prompts to your phone (self-hosted)."
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+cc-poke-notify = "cc_poke.notifier:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
