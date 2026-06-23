@@ -132,6 +132,26 @@ def test_dispatch_unknown_path_404():
     assert resp.status == 404
 
 
+def test_special_char_secret_round_trips_encode_decode_compare():
+    secret = "a&b=c"
+    adapter = _FakeAdapter()
+    app = _app(adapter=adapter, secret=secret, wait=0.05)
+    app.handle_request("Bash", "x")
+    approve_url = next(a.url for a in adapter.calls[0]["actions"] if "d=allow" in a.url)
+    raw_query = urllib.parse.urlparse(approve_url).query
+    # The secret must be percent-encoded in the raw URL, not interpolated literally.
+    assert "a&b=c" not in raw_query
+    assert "a%26b%3Dc" in raw_query
+    q = dict(urllib.parse.parse_qsl(raw_query))  # parse_qsl URL-decodes
+    assert q["s"] == secret
+    # The decoded special-char secret must pass constant-time compare_digest.
+    # (The handle_request rid above already timed out and was consumed, so use a
+    # fresh pending rid to prove the decode -> compare_digest resolve path.)
+    rid = app.store.register()
+    resolved, _ = app.handle_webhook(rid, "allow", q["s"])
+    assert resolved is True
+
+
 def test_from_config_requires_public_base_url_and_secret():
     with pytest.raises(ConfigError):
         DaemonApp.from_config(Config(ntfy_server="https://ntfy.sh", ntfy_topic="t"))

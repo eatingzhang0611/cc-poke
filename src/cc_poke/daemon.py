@@ -6,6 +6,7 @@ ONLY /webhook and /d publicly; /requests stays localhost-only.
 
 from __future__ import annotations
 
+import hmac
 import html
 import json
 import urllib.parse
@@ -63,7 +64,7 @@ class DaemonApp:
     def handle_request(self, tool_name: str, summary: str) -> str | None:
         rid = self.store.register()
         base = self._config.public_base_url
-        s = self._config.webhook_secret
+        s = urllib.parse.quote(self._config.webhook_secret, safe="")
         actions = [
             Action("Approve", f"{base}/webhook?id={rid}&d=allow&s={s}"),
             Action("Deny", f"{base}/webhook?id={rid}&d=deny&s={s}"),
@@ -75,7 +76,7 @@ class DaemonApp:
         return self.store.wait(rid, self._config.wait_seconds)
 
     def handle_webhook(self, rid: str, decision: str, secret: str) -> tuple[bool, str]:
-        if not secret or secret != self._config.webhook_secret:
+        if not secret or not hmac.compare_digest(secret, self._config.webhook_secret):
             return False, _PAGE_INVALID
         if decision not in ("allow", "deny"):
             return False, _PAGE_INVALID
