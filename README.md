@@ -72,7 +72,10 @@ systemctl --user status cc-poke-daemon
 ### 4. 注册 PreToolUse hook
 把 `hooks/pretooluse-settings.example.json` 的内容合并进你的 Claude Code `settings.json`。
 **关键**:hook 的 `timeout`(600s)必须大于 `wait_seconds`(300s),否则 CC 会在 cc-poke
-退回终端弹窗前就杀掉 hook。
+退回终端弹窗前就杀掉 hook。精确规则：hook `timeout` 必须满足 `timeout >= wait_seconds + 30`
+（approve 客户端自身的 HTTP 等待为 `wait_seconds + 15s`，加上推送/网络余量约 15s）。
+如需调大 `wait_seconds`，务必同步调大 `timeout`，否则 Claude Code 会在决定回调前强制终止 hook，
+导致回落到终端弹窗而非直接继续。
 
 ### 5. 冒烟验证(E2E)
 1. daemon 已运行;手机已订阅 ntfy topic。
@@ -84,3 +87,5 @@ systemctl --user status cc-poke-daemon
 公网上 `/webhook` 是「点一下就放行工具执行」的敏感端点。防护:`request_id` 不可猜
 (`secrets.token_urlsafe(32)`)+ 共享 `webhook_secret` + 一次性(决定后即失效)。
 请用 HTTPS,并妥善保管 `webhook_secret`。
+推送通知正文会携带工具/命令摘要，任何能读取 ntfy topic 的人都能看到 Claude 即将执行的内容——
+请将 ntfy topic 本身视为机密，并始终通过 HTTPS 连接 ntfy 服务端。

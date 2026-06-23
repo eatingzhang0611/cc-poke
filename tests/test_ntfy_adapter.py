@@ -77,3 +77,16 @@ def test_send_no_actions_header_when_omitted():
     poster = _RecordingPoster(status=200)
     NtfyAdapter("https://ntfy.sh", "t", poster=poster).send("t", "b")
     assert "Actions" not in poster.calls[0]["headers"]
+
+
+def test_send_sets_click_header_when_provided():
+    poster = _RecordingPoster(status=200)
+    adapter = NtfyAdapter("https://ntfy.sh", "t", poster=poster)
+    adapter.send("title", "body", click="https://x/d?id=1&s=k")
+    assert poster.calls[0]["headers"]["Click"] == "https://x/d?id=1&s=k"
+
+
+def test_send_no_click_header_when_not_provided():
+    poster = _RecordingPoster(status=200)
+    NtfyAdapter("https://ntfy.sh", "t", poster=poster).send("t", "b")
+    assert "Click" not in poster.calls[0]["headers"]

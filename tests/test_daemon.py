@@ -14,8 +14,8 @@ class _FakeAdapter:
         self.ok = ok
         self.calls = []
 
-    def send(self, title, body, actions=None):
-        self.calls.append({"title": title, "body": body, "actions": actions})
+    def send(self, title, body, actions=None, click=None):
+        self.calls.append({"title": title, "body": body, "actions": actions, "click": click})
         return self.ok
 
 
@@ -46,6 +46,21 @@ def test_handle_request_pushes_two_actions_with_rid_and_secret():
     q = _rid_from_actions(actions)
     assert q["s"] == "s3cr3t"
     assert len(q["id"]) > 20
+
+
+def test_handle_request_passes_click_url_pointing_to_decision_page():
+    """handle_request must pass a click= URL pointing to /d with matching rid and secret."""
+    adapter = _FakeAdapter()
+    base = "https://poke.test"
+    secret = "s3cr3t"
+    app = _app(adapter=adapter, secret=secret, base=base, wait=0.05)
+    app.handle_request("Bash", "rm -rf /tmp/x")
+    call = adapter.calls[0]
+    q = _rid_from_actions(call["actions"])
+    rid = q["id"]
+    s_encoded = q["s"]
+    expected_click = f"{base}/d?id={rid}&s={s_encoded}"
+    assert call["click"] == expected_click
 
 
 def test_handle_request_returns_allow_when_webhook_resolves():
@@ -150,6 +165,16 @@ def test_special_char_secret_round_trips_encode_decode_compare():
     rid = app.store.register()
     resolved, _ = app.handle_webhook(rid, "allow", q["s"])
     assert resolved is True
+
+
+def test_dispatch_webhook_get_returns_404_and_leaves_pending():
+    """GET /webhook must not resolve the request (URL-prefetch / auto-approve defence)."""
+    app = _app(secret="s")
+    rid = app.store.register()
+    resp = app.dispatch("GET", "/webhook", {"id": rid, "d": "allow", "s": "s"}, b"")
+    assert resp.status == 404
+    # entry is still pending — we can resolve it manually
+    assert app.store.resolve(rid, "deny") is True
 
 
 def test_from_config_requires_public_base_url_and_secret():

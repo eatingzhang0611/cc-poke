@@ -18,10 +18,17 @@ class Action:
 
 class PushAdapter(ABC):
     @abstractmethod
-    def send(self, title: str, body: str, actions: list[Action] | None = None) -> bool:
+    def send(
+        self,
+        title: str,
+        body: str,
+        actions: list[Action] | None = None,
+        click: str | None = None,
+    ) -> bool:
         """Send one notification. Return True on success, False on failure.
 
-        ``actions`` is an optional list of tappable buttons. Implementations
-        MUST NOT raise — a push failure must never block Claude.
+        ``actions`` is an optional list of tappable buttons.
+        ``click`` is an optional URL opened when the notification is tapped.
+        Implementations MUST NOT raise — a push failure must never block Claude.
         """
         raise NotImplementedError

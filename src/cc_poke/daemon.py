@@ -69,8 +69,9 @@ class DaemonApp:
             Action("Approve", f"{base}/webhook?id={rid}&d=allow&s={s}"),
             Action("Deny", f"{base}/webhook?id={rid}&d=deny&s={s}"),
         ]
+        click = f"{base}/d?id={rid}&s={s}"
         title = f"cc-poke: approve {tool_name or 'tool'}?"  # ASCII
-        if not self._adapter.send(title, summary or "(no detail)", actions):
+        if not self._adapter.send(title, summary or "(no detail)", actions, click=click):
             self.store.cancel(rid)
             return None
         return self.store.wait(rid, self._config.wait_seconds)
@@ -98,7 +99,7 @@ class DaemonApp:
                 data = {}
             decision = self.handle_request(str(data.get("tool_name", "")), str(data.get("summary", "")))
             return Response(200, "application/json", json.dumps({"decision": decision}).encode("utf-8"))
-        if path == "/webhook":
+        if path == "/webhook" and method == "POST":
             _, page = self.handle_webhook(params.get("id", ""), params.get("d", ""), params.get("s", ""))
             return Response(200, "text/html; charset=utf-8", page.encode("utf-8"))
         if path == "/d":

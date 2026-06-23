@@ -36,7 +36,13 @@ class NtfyAdapter(PushAdapter):
         self._poster = poster
         self._timeout = timeout
 
-    def send(self, title: str, body: str, actions: list[Action] | None = None) -> bool:
+    def send(
+        self,
+        title: str,
+        body: str,
+        actions: list[Action] | None = None,
+        click: str | None = None,
+    ) -> bool:
         url = f"{self._server}/{self._topic}"
         headers = {
             "Title": title,  # ASCII only — see Global Constraints
@@ -44,6 +50,8 @@ class NtfyAdapter(PushAdapter):
         }
         if actions:
             headers["Actions"] = _format_actions(actions)  # ASCII only
+        if click:
+            headers["Click"] = click  # ASCII only
         try:
             status = self._poster(url, body.encode("utf-8"), headers, self._timeout)
         except Exception:
