@@ -20,6 +20,11 @@ class Config:
     ntfy_server: str
     ntfy_topic: str
     adapter: str = "ntfy"
+    daemon_url: str = "http://127.0.0.1:8787"
+    public_base_url: str = ""
+    webhook_secret: str = ""
+    allowlist: tuple[str, ...] = ()
+    wait_seconds: float = 300.0
 
 
 def load_config(
@@ -47,4 +52,24 @@ def load_config(
         raise ConfigError(f'cc-poke config at {p} has an empty "ntfy_topic"')
     server = str(data.get("ntfy_server", "https://ntfy.sh")).rstrip("/")
     adapter = str(data.get("adapter", "ntfy"))
-    return Config(ntfy_server=server, ntfy_topic=str(topic), adapter=adapter)
+    daemon_url = str(data.get("daemon_url", "http://127.0.0.1:8787")).rstrip("/")
+    public_base_url = str(data.get("public_base_url", "")).rstrip("/")
+    webhook_secret = str(data.get("webhook_secret", ""))
+    raw_allow = data.get("allowlist", [])
+    if not isinstance(raw_allow, list):
+        raise ConfigError(f'cc-poke config at {p} has "allowlist" that is not a list')
+    allowlist = tuple(str(x) for x in raw_allow)
+    try:
+        wait_seconds = float(data.get("wait_seconds", 300.0))
+    except (TypeError, ValueError) as e:
+        raise ConfigError(f'cc-poke config at {p} has invalid "wait_seconds": {e}') from e
+    return Config(
+        ntfy_server=server,
+        ntfy_topic=str(topic),
+        adapter=adapter,
+        daemon_url=daemon_url,
+        public_base_url=public_base_url,
+        webhook_secret=webhook_secret,
+        allowlist=allowlist,
+        wait_seconds=wait_seconds,
+    )

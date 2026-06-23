@@ -58,3 +58,39 @@ def test_whitespace_topic_raises(tmp_path):
     p = _write(tmp_path, {"ntfy_topic": "   "})
     with pytest.raises(ConfigError):
         load_config(path=p)
+
+
+def test_phase2_fields_default(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"ntfy_topic": "t"}', encoding="utf-8")
+    cfg = load_config(p)
+    assert cfg.daemon_url == "http://127.0.0.1:8787"
+    assert cfg.public_base_url == ""
+    assert cfg.webhook_secret == ""
+    assert cfg.allowlist == ()
+    assert cfg.wait_seconds == 300.0
+
+
+def test_phase2_fields_parsed(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text(json.dumps({
+        "ntfy_topic": "t",
+        "daemon_url": "http://127.0.0.1:9999/",
+        "public_base_url": "https://poke.test/",
+        "webhook_secret": "sek",
+        "allowlist": ["^git status$", "^ls"],
+        "wait_seconds": 120,
+    }), encoding="utf-8")
+    cfg = load_config(p)
+    assert cfg.daemon_url == "http://127.0.0.1:9999"
+    assert cfg.public_base_url == "https://poke.test"
+    assert cfg.webhook_secret == "sek"
+    assert cfg.allowlist == ("^git status$", "^ls")
+    assert cfg.wait_seconds == 120.0
+
+
+def test_allowlist_must_be_list(tmp_path):
+    p = tmp_path / "c.json"
+    p.write_text('{"ntfy_topic": "t", "allowlist": "nope"}', encoding="utf-8")
+    with pytest.raises(ConfigError):
+        load_config(p)
