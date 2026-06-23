@@ -1,6 +1,7 @@
 import pytest
 
 from cc_poke.adapters import make_adapter
+from cc_poke.adapters.base import Action
 from cc_poke.adapters.ntfy import NtfyAdapter
 from cc_poke.config import Config
 
@@ -57,3 +58,22 @@ def test_make_adapter_unknown_raises():
     cfg = Config(ntfy_server="https://ntfy.sh", ntfy_topic="t", adapter="carrier-pigeon")
     with pytest.raises(ValueError):
         make_adapter(cfg)
+
+
+def test_send_includes_actions_header():
+    poster = _RecordingPoster(status=200)
+    adapter = NtfyAdapter("https://ntfy.sh", "t", poster=poster)
+    adapter.send("title", "body", [
+        Action("Approve", "https://x/webhook?id=1&d=allow&s=k"),
+        Action("Deny", "https://x/webhook?id=1&d=deny&s=k"),
+    ])
+    hdr = poster.calls[0]["headers"]["Actions"]
+    assert "http, Approve, https://x/webhook?id=1&d=allow&s=k, method=POST, clear=true" in hdr
+    assert "http, Deny, https://x/webhook?id=1&d=deny&s=k, method=POST, clear=true" in hdr
+    assert "; " in hdr
+
+
+def test_send_no_actions_header_when_omitted():
+    poster = _RecordingPoster(status=200)
+    NtfyAdapter("https://ntfy.sh", "t", poster=poster).send("t", "b")
+    assert "Actions" not in poster.calls[0]["headers"]
