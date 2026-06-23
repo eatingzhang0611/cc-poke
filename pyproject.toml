@@ -10,6 +10,8 @@ dev = ["pytest>=7"]
 
 [project.scripts]
 cc-poke-notify = "cc_poke.notifier:main"
+cc-poke-daemon = "cc_poke.daemon:main"
+cc-poke-approve = "cc_poke.approve:main"
 
 [build-system]
 requires = ["setuptools>=61"]

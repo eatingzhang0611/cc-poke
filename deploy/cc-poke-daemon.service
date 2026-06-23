@@ -1,0 +1,14 @@
+[Unit]
+Description=cc-poke approval daemon
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/home/yd/workspace/cc-poke/.venv/bin/cc-poke-daemon
+Restart=on-failure
+RestartSec=2
+# 低内存:无需额外解释器进程
+MemoryMax=128M
+
+[Install]
+WantedBy=default.target

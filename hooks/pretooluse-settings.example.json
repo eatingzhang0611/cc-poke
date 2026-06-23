@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/yd/workspace/cc-poke/.venv/bin/cc-poke-approve",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
