@@ -228,11 +228,18 @@ with Approve/Deny → tap Approve → the command runs without a terminal prompt
 - Anyone who can read your ntfy topic can see the command in the notification
   body. Treat the topic itself as a secret.
 - Expose only `/webhook` and `/d`. Never expose `/requests`.
+- The `allowlist` is matched against the full command with `re.search`. Anchor
+  every pattern (`^...$`) **and** exclude shell metacharacters (`; & | < > $ ( )`
+  and backticks) in the argument part. Otherwise a loose pattern like
+  `^ls( .*)?$` also allows `ls && rm -rf x`, which would then run with no push.
 
 > `/webhook` 点一下就放行工具执行，是敏感端点：用不可猜的 `request_id` + 共享
 > `webhook_secret`（常数时间比较）+ 一次性（用过即失效）防护。全程 HTTPS，
 > `webhook_secret` 保密。能读你 ntfy topic 的人能看到命令内容，topic 本身要当机密。
-> 只暴露 `/webhook` 和 `/d`，绝不暴露 `/requests`。
+> 只暴露 `/webhook` 和 `/d`，绝不暴露 `/requests`。`allowlist` 用 `re.search` 对整条
+> 命令匹配——每个模式都要两端锚定 `^...$` **且**在参数里排除 shell 元字符
+> （`; & | < > $ ( )` 和反引号），否则 `^ls( .*)?$` 这种松写法会连 `ls && rm -rf x`
+> 一起放行、直接执行不推送。
 
 ## Uninstall / 卸载
 
