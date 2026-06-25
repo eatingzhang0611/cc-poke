@@ -18,7 +18,7 @@
 - webhook 安全:`request_id` = `secrets.token_urlsafe(32)`(不可猜);`/webhook` 校验共享 `webhook_secret`、id 必须 pending、**一次性**(决定后失效)。
 - webhook 的 HTTP 响应**一律 200 + 友好页**,不靠状态码泄露 id 是否有效(是否真的 resolve 仅由内部 store 状态体现)。
 - Phase 1 接口保持兼容:`adapter.send(title, body)` 旧调用不变(新增 `actions` 默认 None);`cc-poke-notify` 与 Notification hook 行为不动。
-- **复用现有 `.venv`,不要重建**(VPS 缺 python3-venv/ensurepip)。运行测试:`/home/yd/workspace/cc-poke/.venv/bin/python -m pytest`。
+- **复用现有 `.venv`,不要重建**(VPS 缺 python3-venv/ensurepip)。运行测试:`/path/to/cc-poke/.venv/bin/python -m pytest`。
 
 ---
 
@@ -76,7 +76,7 @@ def test_allowlist_must_be_list(tmp_path):
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_config.py -k phase2 or allowlist -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_config.py -k phase2 or allowlist -v`
 Expected: FAIL(`Config` 无 `daemon_url` 等属性 / `AttributeError`)。
 
 - [ ] **Step 3: Implement**
@@ -126,7 +126,7 @@ class Config:
 
 - [ ] **Step 4: Run tests**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_config.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_config.py -v`
 Expected: 全部 PASS(含 Phase 1 既有 config 测试)。
 
 - [ ] **Step 5: Commit**
@@ -180,7 +180,7 @@ def test_send_no_actions_header_when_omitted():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_ntfy_adapter.py -k actions -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_ntfy_adapter.py -k actions -v`
 Expected: FAIL(`Action` 无法导入 / `send` 不接受第三参)。
 
 - [ ] **Step 3: Implement base.py**
@@ -253,7 +253,7 @@ def _format_actions(actions: list[Action]) -> str:
 
 - [ ] **Step 5: Run tests**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_ntfy_adapter.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_ntfy_adapter.py -v`
 Expected: 全 PASS(含 Phase 1 既有 adapter 测试,验证向后兼容)。
 
 - [ ] **Step 6: Commit**
@@ -351,7 +351,7 @@ def test_cancel_makes_wait_return_none():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_store.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_store.py -v`
 Expected: FAIL(`ModuleNotFoundError: cc_poke.store`)。
 
 - [ ] **Step 3: Implement**
@@ -410,7 +410,7 @@ class DecisionStore:
 
 - [ ] **Step 4: Run tests**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_store.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_store.py -v`
 Expected: 全 PASS,输出无 warning。
 
 - [ ] **Step 5: Commit**
@@ -591,7 +591,7 @@ def test_from_config_requires_public_base_url_and_secret():
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_daemon.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_daemon.py -v`
 Expected: FAIL(`ModuleNotFoundError: cc_poke.daemon`)。
 
 - [ ] **Step 3: Implement**
@@ -762,7 +762,7 @@ def main() -> int:
 
 - [ ] **Step 4: Run tests**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_daemon.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_daemon.py -v`
 Expected: 全 PASS,输出无 warning。
 
 - [ ] **Step 5: Commit**
@@ -927,7 +927,7 @@ class _Stdin:
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_approve.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_approve.py -v`
 Expected: FAIL(`ModuleNotFoundError: cc_poke.approve`)。
 
 - [ ] **Step 3: Implement**
@@ -1053,7 +1053,7 @@ def main() -> int:
 
 - [ ] **Step 4: Run tests**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_approve.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_approve.py -v`
 Expected: 全 PASS,输出无 warning。
 
 - [ ] **Step 5: Commit**
@@ -1098,7 +1098,7 @@ def test_daemon_and_approve_mains_exist():
 
 - [ ] **Step 2: Run test to verify it passes after Task 4/5**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest tests/test_entrypoints.py -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest tests/test_entrypoints.py -v`
 Expected: PASS(Task 4、5 已建模块)。若 import 失败说明前置任务未完成。
 
 - [ ] **Step 3: Edit pyproject.toml**
@@ -1137,7 +1137,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/home/yd/workspace/cc-poke/.venv/bin/cc-poke-daemon
+ExecStart=/path/to/cc-poke/.venv/bin/cc-poke-daemon
 Restart=on-failure
 RestartSec=2
 # 低内存:无需额外解释器进程
@@ -1158,7 +1158,7 @@ WantedBy=default.target
         "hooks": [
           {
             "type": "command",
-            "command": "/home/yd/workspace/cc-poke/.venv/bin/cc-poke-approve",
+            "command": "/path/to/cc-poke/.venv/bin/cc-poke-approve",
             "timeout": 600
           }
         ]
@@ -1195,7 +1195,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now cc-poke-daemon
 systemctl --user status cc-poke-daemon
 ```
-或裸跑:`/home/yd/workspace/cc-poke/.venv/bin/cc-poke-daemon`。
+或裸跑:`/path/to/cc-poke/.venv/bin/cc-poke-daemon`。
 
 ### 3. 反代(只暴露两个路径)
 把 `public_base_url` 指向的反代**仅**转发 `/webhook` 与 `/d` 到 `127.0.0.1:8787`;
@@ -1221,14 +1221,14 @@ systemctl --user status cc-poke-daemon
 - [ ] **Step 6: Reinstall + verify entry points**
 
 ```bash
-/home/yd/workspace/cc-poke/.venv/bin/pip install -e . >/dev/null
-ls /home/yd/workspace/cc-poke/.venv/bin/cc-poke-daemon /home/yd/workspace/cc-poke/.venv/bin/cc-poke-approve
+/path/to/cc-poke/.venv/bin/pip install -e . >/dev/null
+ls /path/to/cc-poke/.venv/bin/cc-poke-daemon /path/to/cc-poke/.venv/bin/cc-poke-approve
 ```
 Expected: 两个路径都存在。
 
 - [ ] **Step 7: Full suite**
 
-Run: `/home/yd/workspace/cc-poke/.venv/bin/python -m pytest -v`
+Run: `/path/to/cc-poke/.venv/bin/python -m pytest -v`
 Expected: 全 PASS(Phase 1 + Phase 2 全部),输出无 warning。
 
 - [ ] **Step 8: Commit**

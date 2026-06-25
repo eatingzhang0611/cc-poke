@@ -8,7 +8,7 @@ Phase 1 = 只通知（你仍 SSH 回终端 approve）。
 前置：Debian/Ubuntu 需先装 venv 支持：`sudo apt install python3.12-venv`（其他平台通常已内置）。
 
 ```bash
-cd /home/yd/workspace/cc-poke
+cd /path/to/cc-poke
 python3 -m venv .venv
 .venv/bin/python -m pip install -e .
 ```
@@ -55,7 +55,7 @@ ntfy 则直接用内联 Actions 按钮——两者审批语义一致。装 Bark 
 ## 验证
 
 ```bash
-echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | /home/yd/workspace/cc-poke/.venv/bin/cc-poke-notify
+echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | /path/to/cc-poke/.venv/bin/cc-poke-notify
 ```
 手机应收到一条标题为 `cc-poke: Claude needs you`、正文含 `hello from cc-poke` 的通知。
 
@@ -86,7 +86,7 @@ systemctl --user daemon-reload
 systemctl --user enable --now cc-poke-daemon
 systemctl --user status cc-poke-daemon
 ```
-或裸跑:`/home/yd/workspace/cc-poke/.venv/bin/cc-poke-daemon`。
+或裸跑:`/path/to/cc-poke/.venv/bin/cc-poke-daemon`。
 
 ### 3. 反代(只暴露两个路径)
 把 `public_base_url` 指向的反代**仅**转发 `/webhook` 与 `/d` 到 `127.0.0.1:8787`;

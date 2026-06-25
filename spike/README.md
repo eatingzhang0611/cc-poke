@@ -37,7 +37,7 @@
 
 在 Termius/真实终端里：
 ```bash
-/home/yd/workspace/cc-poke/spike/run-interactive-probe.sh
+/path/to/cc-poke/spike/run-interactive-probe.sh
 ```
 进会话后粘：`用 Bash 工具运行： rm -rf /tmp/cc-poke-probe-victim && mkdir /tmp/cc-poke-probe-victim`
 

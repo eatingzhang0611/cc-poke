@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/yd/workspace/cc-poke/.venv/bin/cc-poke-notify"
+            "command": "/path/to/cc-poke/.venv/bin/cc-poke-notify"
           }
         ]
       }

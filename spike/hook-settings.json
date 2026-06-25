@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /home/yd/workspace/cc-poke/spike/hook_probe.py"
+            "command": "python3 /path/to/cc-poke/spike/hook_probe.py"
           }
         ]
       }

@@ -17,10 +17,10 @@ class FakeAdapter(PushAdapter):
 
 
 def test_build_message_with_message_and_cwd():
-    title, body = notifier.build_message({"message": "Needs permission", "cwd": "/home/yd/p"})
+    title, body = notifier.build_message({"message": "Needs permission", "cwd": "/home/user/p"})
     assert title == "cc-poke: Claude needs you"
     assert "Needs permission" in body
-    assert "/home/yd/p" in body
+    assert "/home/user/p" in body
 
 
 def test_build_message_defaults_when_empty():

@@ -11,7 +11,7 @@
 #     + hook_probe.log 出现 `PreToolUse`  => 成功！hook 能在交互式拦截+放行，档1 走 hook 这条路
 #   - 仍弹审批弹窗  => 这条路也不行，回到「只做档0 / 会话托管」讨论
 #
-# 退出后看证据： cat /home/yd/workspace/cc-poke/spike/hook_probe.log
+# 退出后看证据： cat /path/to/cc-poke/spike/hook_probe.log
 
 set -euo pipefail
 SPIKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

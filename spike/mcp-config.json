@@ -3,7 +3,7 @@
     "poke": {
       "type": "stdio",
       "command": "python3",
-      "args": ["/home/yd/workspace/cc-poke/spike/mcp_probe.py"]
+      "args": ["/path/to/cc-poke/spike/mcp_probe.py"]
     }
   }
 }

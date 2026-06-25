@@ -11,7 +11,7 @@
 # 然后观察两件事（这就是 go/no-go 证据）：
 #   A. 终端有没有弹出常规的「权限审批」TUI 弹窗？
 #   B. 退出会话后，看 probe.log 里有没有新的 `!!! tools/call` 行：
-#        cat /home/yd/workspace/cc-poke/spike/probe.log
+#        cat /path/to/cc-poke/spike/probe.log
 #
 # 判定：
 #   - 没弹 TUI 弹窗 + probe.log 出现 tools/call  => 成功（交互式也走 MCP，档1 可做）
