@@ -53,7 +53,7 @@ Claude Code 用它自己的终端弹窗。
 点开通知会打开一个页面，决定前先看清要执行的命令。浏览器打开
 [`assets/approval-page.html`](assets/approval-page.html) 可预览。
 
-![cc-poke 审批页](assets/approval-page.png)
+![cc-poke 审批页](assets/approval-page.jpeg)
 
 ## 依赖
 

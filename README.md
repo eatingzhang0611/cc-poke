@@ -60,7 +60,7 @@ Tapping the notification opens a page that shows the exact command before you
 decide. Open [`assets/approval-page.html`](assets/approval-page.html) for a live
 preview.
 
-![cc-poke approval page](assets/approval-page.png)
+![cc-poke approval page](assets/approval-page.jpeg)
 
 ## Requirements
 
