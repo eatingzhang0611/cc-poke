@@ -25,6 +25,29 @@ python3 -m venv .venv
 }
 ```
 
+### 推送通道：ntfy（默认）/ Bark
+
+cc-poke 支持两种推送后端，用 `adapter` 字段切换。**默认 `ntfy`**：开源、可自建服务端、
+通知带内联 Approve/Deny 按钮，iOS / Android / 桌面都可用。
+
+`bark` 是面向 iOS 的备选（[bark.day.app](https://bark.day.app)）。Bark 没有内联按钮，
+Approve/Deny 在「点开通知后打开的网页」上完成（`click` 映射到 Bark 的 `url` 字段），
+ntfy 则直接用内联 Actions 按钮——两者审批语义一致。装 Bark app、复制 device key 后：
+
+```json
+{
+  "adapter": "bark",
+  "bark_server": "https://api.day.app",
+  "bark_device_key": "your-bark-device-key"
+}
+```
+
+> **iOS 收不到横幅？多半是网络挡了 APNs，不是 ntfy 的问题。** ntfy 和 Bark 的后台推送
+> 都依赖 Apple 的 APNs(长连接走 5223 端口)。某些 WiFi 虽然能正常上网(80/443 通)，
+> 却拦掉 5223，于是任何走 APNs 的 app(ntfy、Bark 都一样)都收不到后台横幅。
+> **快速判定**:换到蜂窝数据或开 VPN——若横幅恢复，就是那个 WiFi 在拦 APNs，
+> 换 adapter 没用，得从网络侧解决(放行 5223 / 用 VPN / 走蜂窝)。
+
 3. 把 `hooks/notification-settings.example.json` 的内容合并进你的 Claude Code settings
    （用户级 `~/.claude/settings.json` 或项目级 `.claude/settings.json`），
    `command` 用 `.venv/bin/cc-poke-notify` 的绝对路径。

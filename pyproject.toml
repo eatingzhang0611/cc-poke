@@ -2,7 +2,16 @@
 name = "cc-poke"
 version = "0.1.0"
 description = "Push Claude Code approval/notification prompts to your phone (self-hosted)."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "itchozzz" }]
+keywords = ["claude-code", "notifications", "push", "ntfy", "bark", "self-hosted"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+]
 dependencies = []
 
 [project.optional-dependencies]

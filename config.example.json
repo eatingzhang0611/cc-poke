@@ -1,6 +1,9 @@
 {
+  "adapter": "ntfy",
   "ntfy_server": "https://ntfy.sh",
   "ntfy_topic": "REPLACE-with-a-long-random-topic",
+  "bark_server": "https://api.day.app",
+  "bark_device_key": "REPLACE-with-your-Bark-device-key (only used when adapter=bark)",
   "daemon_url": "http://127.0.0.1:8787",
   "public_base_url": "https://poke.example.com",
   "webhook_secret": "REPLACE-with-output-of: python -c \"import secrets;print(secrets.token_urlsafe(24))\"",
