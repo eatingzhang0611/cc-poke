@@ -49,7 +49,7 @@ def test_handle_request_pushes_two_actions_with_rid_and_secret():
 
 
 def test_handle_request_passes_click_url_pointing_to_decision_page():
-    """handle_request must pass a click= URL pointing to /d with matching rid and secret."""
+    """handle_request must pass a click= URL pointing to /d carrying rid, secret, tool, command."""
     adapter = _FakeAdapter()
     base = "https://poke.test"
     secret = "s3cr3t"
@@ -58,9 +58,12 @@ def test_handle_request_passes_click_url_pointing_to_decision_page():
     call = adapter.calls[0]
     q = _rid_from_actions(call["actions"])
     rid = q["id"]
-    s_encoded = q["s"]
-    expected_click = f"{base}/d?id={rid}&s={s_encoded}"
-    assert call["click"] == expected_click
+    assert call["click"].startswith(f"{base}/d?")
+    cq = dict(urllib.parse.parse_qsl(urllib.parse.urlparse(call["click"]).query))
+    assert cq["id"] == rid
+    assert cq["s"] == secret  # parse_qsl URL-decodes
+    assert cq["t"] == "Bash"
+    assert cq["c"] == "rm -rf /tmp/x"
 
 
 def test_handle_request_returns_allow_when_webhook_resolves():
@@ -131,6 +134,28 @@ def test_decision_page_contains_buttons_and_params():
     assert 'value="s"' in html or "value=s" in html or ">s<" in html or "s" in html
     assert "allow" in html and "deny" in html
     assert "https://poke.test/webhook" in html
+
+
+def test_decision_page_shows_tool_and_command():
+    app = _app(secret="s", base="https://poke.test")
+    html = app.decision_page("rid123", "s", "Bash", "rm -rf /tmp/x")
+    assert "Bash" in html
+    assert "rm -rf /tmp/x" in html
+
+
+def test_decision_page_escapes_command_html():
+    app = _app(secret="s", base="https://poke.test")
+    html = app.decision_page("rid123", "s", "Bash", "<script>alert(1)</script>")
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_dispatch_decision_page_passes_tool_and_command():
+    app = _app(secret="s")
+    resp = app.dispatch("GET", "/d", {"id": "r", "s": "s", "t": "Bash", "c": "ls -la"}, b"")
+    assert resp.status == 200
+    assert b"ls -la" in resp.body
+    assert b"Bash" in resp.body
 
 
 def test_dispatch_webhook_returns_200_html_friendly():

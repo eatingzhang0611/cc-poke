@@ -20,6 +20,8 @@ class Config:
     ntfy_server: str
     ntfy_topic: str
     adapter: str = "ntfy"
+    bark_server: str = "https://api.day.app"
+    bark_device_key: str = ""
     daemon_url: str = "http://127.0.0.1:8787"
     public_base_url: str = ""
     webhook_secret: str = ""
@@ -45,13 +47,18 @@ def load_config(
         raise ConfigError(f"cc-poke config at {p} is not valid JSON: {e}") from e
     if not isinstance(data, dict):
         raise ConfigError(f"cc-poke config at {p} must be a JSON object")
-    topic = data.get("ntfy_topic")
-    if topic is None:
-        raise ConfigError(f'cc-poke config at {p} is missing required "ntfy_topic"')
-    if not str(topic).strip():
-        raise ConfigError(f'cc-poke config at {p} has an empty "ntfy_topic"')
-    server = str(data.get("ntfy_server", "https://ntfy.sh")).rstrip("/")
     adapter = str(data.get("adapter", "ntfy"))
+    topic = data.get("ntfy_topic")
+    if adapter == "ntfy":
+        if topic is None:
+            raise ConfigError(f'cc-poke config at {p} is missing required "ntfy_topic"')
+        if not str(topic).strip():
+            raise ConfigError(f'cc-poke config at {p} has an empty "ntfy_topic"')
+    server = str(data.get("ntfy_server", "https://ntfy.sh")).rstrip("/")
+    bark_server = str(data.get("bark_server", "https://api.day.app")).rstrip("/")
+    bark_device_key = str(data.get("bark_device_key", ""))
+    if adapter == "bark" and not bark_device_key.strip():
+        raise ConfigError(f'cc-poke config at {p} (adapter="bark") is missing required "bark_device_key"')
     daemon_url = str(data.get("daemon_url", "http://127.0.0.1:8787")).rstrip("/")
     public_base_url = str(data.get("public_base_url", "")).rstrip("/")
     webhook_secret = str(data.get("webhook_secret", ""))
@@ -65,8 +72,10 @@ def load_config(
         raise ConfigError(f'cc-poke config at {p} has invalid "wait_seconds": {e}') from e
     return Config(
         ntfy_server=server,
-        ntfy_topic=str(topic),
+        ntfy_topic=str(topic) if topic is not None else "",
         adapter=adapter,
+        bark_server=bark_server,
+        bark_device_key=bark_device_key,
         daemon_url=daemon_url,
         public_base_url=public_base_url,
         webhook_secret=webhook_secret,

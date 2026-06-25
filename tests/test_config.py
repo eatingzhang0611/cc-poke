@@ -94,3 +94,34 @@ def test_allowlist_must_be_list(tmp_path):
     p.write_text('{"ntfy_topic": "t", "allowlist": "nope"}', encoding="utf-8")
     with pytest.raises(ConfigError):
         load_config(p)
+
+
+def test_bark_fields_default(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "t"})
+    cfg = load_config(path=p)
+    assert cfg.bark_server == "https://api.day.app"
+    assert cfg.bark_device_key == ""
+
+
+def test_bark_fields_parsed(tmp_path):
+    p = _write(tmp_path, {
+        "adapter": "bark",
+        "bark_server": "https://api.day.app/",
+        "bark_device_key": "KEY123",
+    })
+    cfg = load_config(path=p)
+    assert cfg.adapter == "bark"
+    assert cfg.bark_server == "https://api.day.app"  # trailing slash stripped
+    assert cfg.bark_device_key == "KEY123"
+
+
+def test_bark_adapter_does_not_require_ntfy_topic(tmp_path):
+    p = _write(tmp_path, {"adapter": "bark", "bark_device_key": "KEY123"})
+    cfg = load_config(path=p)  # must not raise
+    assert cfg.adapter == "bark"
+
+
+def test_bark_adapter_requires_device_key(tmp_path):
+    p = _write(tmp_path, {"adapter": "bark"})
+    with pytest.raises(ConfigError):
+        load_config(path=p)
