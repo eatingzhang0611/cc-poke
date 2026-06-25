@@ -1,0 +1,49 @@
+<!doctype html><html lang=zh><head><meta charset=utf-8><meta name=viewport content='width=device-width,initial-scale=1,viewport-fit=cover'><title>cc-poke</title><style>
+*{box-sizing:border-box}
+:root{
+  --bg:#0d141c;--card:#121d28;--inset:#0a1117;--border:#22303d;
+  --text:#e6edf3;--muted:#7d8da0;--teal:#5eead4;--amber:#f5b945;
+  --approve:#2ea043;--approve-act:#26823a;--deny:#f85149;
+}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);min-height:100dvh;
+  font-family:-apple-system,system-ui,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+  display:grid;place-items:center;padding:22px;line-height:1.45;-webkit-text-size-adjust:100%}
+.card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);
+  border-radius:16px;padding:22px;box-shadow:0 14px 44px rgba(0,0,0,.5)}
+.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+.brand{font-size:15px;font-weight:650;letter-spacing:.01em}
+.brand b{color:var(--teal);font-weight:650}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
+  color:var(--amber);background:#201a0c;border:1px solid #3a3115;border-radius:999px;padding:5px 11px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--amber);
+  box-shadow:0 0 0 0 rgba(245,185,69,.55);animation:pulse 1.9s infinite}
+.label{color:var(--muted);font-size:13px;margin:0 0 10px}
+.term{background:var(--inset);border:1px solid var(--border);border-radius:11px;padding:14px;
+  font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:14px;color:#d7e2ee;
+  white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere}
+.term .p{color:var(--teal);user-select:none;margin-right:7px}
+.caret{display:inline-block;width:7px;height:1.05em;background:var(--teal);
+  vertical-align:-2px;margin-left:3px;animation:blink 1.05s steps(1) infinite}
+.meta{margin:13px 2px 22px;font-size:12.5px;color:var(--muted)}
+.meta .k{color:#9fb0c3}
+.meta .v{color:var(--text);font-family:ui-monospace,"SF Mono",Menlo,monospace}
+.actions{display:flex;gap:12px}
+.actions form{flex:1;margin:0}
+.btn{width:100%;border:0;border-radius:11px;padding:15px 0;font-size:16px;font-weight:650;
+  cursor:pointer;-webkit-tap-highlight-color:transparent}
+.approve{background:var(--approve);color:#fff}
+.approve:active{background:var(--approve-act)}
+.deny{background:transparent;color:var(--deny);border:1.5px solid #5a2a2a}
+.deny:active{background:#2a1414}
+.btn:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.note{text-align:center}
+.note .glyph{font-size:38px;line-height:1;margin-bottom:10px}
+.note h2{margin:0 0 6px;font-size:18px;font-weight:650}
+.note p{margin:0;color:var(--muted);font-size:13.5px}
+.ok .glyph{color:var(--approve)}
+.gone .glyph{color:var(--deny)}
+@keyframes blink{50%{opacity:0}}
+@keyframes pulse{70%{box-shadow:0 0 0 7px rgba(245,185,69,0)}100%{box-shadow:0 0 0 0 rgba(245,185,69,0)}}
+@media (prefers-reduced-motion:reduce){.caret,.dot{animation:none}}
+</style></head><body><main class=card><div class=head><div class=brand>cc<b>&middot;</b>poke</div><span class=chip><span class=dot></span>待批准</span></div><p class=label>Claude 申请执行</p><div class=term><span class=p>$</span>rm -rf /tmp/cc-poke-test<span class=caret></span></div><p class=meta><span class=k>工具</span> &nbsp;<span class=v>Bash</span></p><div class=actions><form method=POST action="https://poke.example.com/webhook"><input type=hidden name=id value="demo-id"><input type=hidden name=s value="demo-secret"><button class='btn approve' name=d value=allow>Approve</button></form><form method=POST action="https://poke.example.com/webhook"><input type=hidden name=id value="demo-id"><input type=hidden name=s value="demo-secret"><button class='btn deny' name=d value=deny>Deny</button></form></div></main></body></html>

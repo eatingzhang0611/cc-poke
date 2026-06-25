@@ -1,114 +1,263 @@
 # cc-poke
 
-当 Claude Code 停下等待时，把提醒推送到你的 iPhone（自托管、零第三方信任）。
-Phase 1 = 只通知（你仍 SSH 回终端 approve）。
+[![CI](https://github.com/eatingzhang0611/cc-poke/actions/workflows/ci.yml/badge.svg)](https://github.com/eatingzhang0611/cc-poke/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 安装
+When Claude Code stops and waits for you, cc-poke sends a notification to your
+phone. You can also approve or deny a command from the phone, and Claude Code
+continues — no need to switch back to the terminal. It is self-hosted: the only
+thing that leaves your machine is a short notification, sent through a push
+service you choose.
 
-前置：Debian/Ubuntu 需先装 venv 支持：`sudo apt install python3.12-venv`（其他平台通常已内置）。
+> 当 Claude Code 停下来等你时，cc-poke 把一条通知推到你手机上。你还可以在手机上
+> 直接点「批准 / 拒绝」，Claude Code 就接着跑，不用切回终端。它是自托管的：离开你
+> 机器的只有一条通知，走你自己选的推送服务。
 
-```bash
-cd /path/to/cc-poke
-python3 -m venv .venv
-.venv/bin/python -m pip install -e .
+There are two levels, and you can stop at the first:
+
+1. **Notify** — tell you on your phone that Claude Code needs attention. You
+   still go back to the terminal to act.
+2. **Remote approve** — tap Approve/Deny on the phone; the decision goes back to
+   Claude Code and it continues.
+
+> 分两档，用第一档就够：**1) 只通知** —— 手机上提醒你 Claude Code 在等，你仍回终端
+> 操作；**2) 远程批准** —— 手机上点批准/拒绝，决定回传，Claude Code 直接继续。
+
+## How it works / 工作原理
+
+```
+Claude Code ──hook──▶ cc-poke ──push──▶ your phone
+                         ▲                   │
+                         └──── decision ◀──tap┘   (remote-approve only)
 ```
 
-## 配置
+cc-poke is two small pieces:
 
-1. 在手机装 ntfy app，订阅一个**长随机** topic（当密码用）。
-2. 建配置文件 `~/.config/cc-poke/config.json`（参考 `config.example.json`）：
+- A **hook** that Claude Code runs on each event (a notification, or a tool
+  about to run). It is short-lived.
+- A **daemon** (remote-approve only) that holds the pending decision, pushes the
+  notification, and serves the approval page and the decision webhook.
+
+If anything fails — push down, network gone, no answer in time — the hook exits
+without a decision and Claude Code falls back to its normal terminal prompt. It
+never blocks you.
+
+> cc-poke 由两部分组成：**hook**（Claude Code 每次事件时运行，短命进程）和
+> **daemon**（仅远程批准时需要，保存待决定、推通知、提供审批页与回调 webhook）。
+> 任何环节出错——推送挂了、断网、超时没人理——hook 都会不带决定地退出，Claude Code
+> 回退到它自己的终端提示。它绝不会把你卡住。
+
+## The approval page / 审批页
+
+Tapping the notification opens a small page showing the exact command before you
+decide. Open [`assets/approval-page.html`](assets/approval-page.html) in a
+browser for a live preview.
+
+> 点开通知会打开一个小页面，决定前先看清要执行的命令。浏览器打开
+> [`assets/approval-page.html`](assets/approval-page.html) 可预览。
+
+![cc-poke approval page](assets/approval-page.png)
+
+## Requirements / 依赖
+
+- Python 3.10+
+- A push app on your phone: **ntfy** (default) or **Bark** (iOS).
+- For remote approve: Linux with a systemd user session, and an HTTPS reverse
+  proxy in front of the daemon.
+
+> Python 3.10+；手机推送 app（**ntfy** 默认，或 iOS 的 **Bark**）；远程批准还需
+> Linux + systemd 用户会话，以及给 daemon 套一层 HTTPS 反代。
+
+On Debian/Ubuntu you may need venv support first: `sudo apt install python3-venv`.
+
+## Install / 安装
+
+```bash
+git clone git@github.com:eatingzhang0611/cc-poke.git
+cd cc-poke
+./install.sh
+```
+
+`install.sh` is idempotent. It creates a virtualenv, installs the package,
+writes `~/.config/cc-poke/config.json` with a generated `webhook_secret`, and
+installs the systemd user unit (without starting it). It then prints the
+remaining steps. Edit the config before using it.
+
+> `install.sh` 可重复运行：建 venv、装包、生成带随机 `webhook_secret` 的
+> `~/.config/cc-poke/config.json`、装好 systemd 用户单元（不自动启动），最后打印后续
+> 步骤。用之前先改配置。
+
+## Push channels / 推送通道
+
+cc-poke ships two backends, picked with the `adapter` field. The default is
+**ntfy** (open source, self-hostable, notifications carry inline Approve/Deny
+buttons). Works on iOS, Android, and desktop.
 
 ```json
-{
-  "ntfy_server": "https://ntfy.sh",
-  "ntfy_topic": "your-long-random-secret-topic"
+{ "adapter": "ntfy", "ntfy_server": "https://ntfy.sh", "ntfy_topic": "a-long-random-string" }
+```
+
+**Bark** is an alternative for iOS. It has no inline buttons, so Approve/Deny
+happen on the page opened by tapping the notification. Install the Bark app,
+copy its device key, then:
+
+```json
+{ "adapter": "bark", "bark_server": "https://api.day.app", "bark_device_key": "your-device-key" }
+```
+
+> 两个后端用 `adapter` 切换。默认 **ntfy**（开源、可自建、通知带内联 Approve/Deny
+> 按钮，iOS/Android/桌面都能用）。**Bark** 是 iOS 备选，没有内联按钮，点通知打开页面
+> 再批准。
+
+### Not getting banners on iOS? / iOS 收不到横幅？
+
+This is almost always your network, not ntfy. Both ntfy and Bark deliver
+background notifications through Apple's APNs, which uses a long-lived
+connection on port 5223. Some Wi-Fi networks allow normal web traffic
+(80/443) but block 5223, so no APNs-based app gets background banners on them.
+
+Quick check: switch to cellular data or turn on a VPN. If banners come back, the
+Wi-Fi is blocking APNs — switching adapter won't help; fix it on the network
+side (allow 5223, use a VPN, or use cellular).
+
+> iOS 收不到横幅，基本是网络问题，不是 ntfy 的锅。ntfy 和 Bark 的后台推送都走 Apple
+> APNs（长连接，5223 端口）。有些 WiFi 能正常上网（80/443）却拦了 5223，于是任何走
+> APNs 的 app 都收不到后台横幅。**快速判定**：换蜂窝或开 VPN，横幅回来就是 WiFi 拦了
+> APNs，换 adapter 没用，得从网络侧解决。
+
+## Configuration / 配置
+
+`~/.config/cc-poke/config.json`. See [`config.example.json`](config.example.json).
+
+| Field | Used by | Meaning |
+|-------|---------|---------|
+| `adapter` | all | `"ntfy"` or `"bark"`. |
+| `ntfy_server` / `ntfy_topic` | ntfy | Server URL and topic. Treat the topic as a password — make it long and random. |
+| `bark_server` / `bark_device_key` | bark | Bark server and your device key. |
+| `daemon_url` | approve hook | Where the hook reaches the daemon. Default `http://127.0.0.1:8787`. |
+| `public_base_url` | daemon | Your public HTTPS address for the reverse proxy, e.g. `https://poke.example.com`. |
+| `webhook_secret` | daemon | Shared secret guarding the decision webhook. Generated by `install.sh`. |
+| `allowlist` | approve hook | Regexes for Bash commands to allow silently (no push), so trivial commands don't spam you. |
+| `wait_seconds` | daemon | How long to wait for a phone decision before falling back to the terminal. Default 300. |
+
+## Level 1: notifications only / 只通知
+
+Merge [`hooks/notification-settings.example.json`](hooks/notification-settings.example.json)
+into your Claude Code settings (`~/.claude/settings.json` or a project
+`.claude/settings.json`), using the absolute path to `cc-poke-notify` printed by
+`install.sh`.
+
+Check it:
+
+```bash
+echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | .venv/bin/cc-poke-notify
+```
+
+Your phone should get a notification titled `cc-poke: Claude needs you`.
+
+> 把 `hooks/notification-settings.example.json` 合并进 Claude Code 设置，`command`
+> 用 `install.sh` 打印的 `cc-poke-notify` 绝对路径。用上面的命令验证。
+
+## Level 2: remote approve / 远程批准
+
+This needs the daemon and a reverse proxy.
+
+**1. Edit the config** — set `public_base_url` to your HTTPS address. Optionally
+fill `allowlist` so trivial commands run without a push.
+
+**2. Reverse proxy — expose only `/webhook` and `/d`.** Keep `/requests`
+private (the hook calls it on localhost). Examples:
+
+Caddy:
+
+```
+poke.example.com {
+    @public path /webhook /d
+    handle @public {
+        reverse_proxy 127.0.0.1:8787
+    }
+    respond 404
 }
 ```
 
-### 推送通道：ntfy（默认）/ Bark
+nginx:
 
-cc-poke 支持两种推送后端，用 `adapter` 字段切换。**默认 `ntfy`**：开源、可自建服务端、
-通知带内联 Approve/Deny 按钮，iOS / Android / 桌面都可用。
-
-`bark` 是面向 iOS 的备选（[bark.day.app](https://bark.day.app)）。Bark 没有内联按钮，
-Approve/Deny 在「点开通知后打开的网页」上完成（`click` 映射到 Bark 的 `url` 字段），
-ntfy 则直接用内联 Actions 按钮——两者审批语义一致。装 Bark app、复制 device key 后：
-
-```json
-{
-  "adapter": "bark",
-  "bark_server": "https://api.day.app",
-  "bark_device_key": "your-bark-device-key"
+```nginx
+server {
+    listen 443 ssl;
+    server_name poke.example.com;
+    # ssl_certificate ... ; ssl_certificate_key ... ;
+    location = /webhook { proxy_pass http://127.0.0.1:8787; }
+    location = /d       { proxy_pass http://127.0.0.1:8787; }
+    location /          { return 404; }
 }
 ```
 
-> **iOS 收不到横幅？多半是网络挡了 APNs，不是 ntfy 的问题。** ntfy 和 Bark 的后台推送
-> 都依赖 Apple 的 APNs(长连接走 5223 端口)。某些 WiFi 虽然能正常上网(80/443 通)，
-> 却拦掉 5223，于是任何走 APNs 的 app(ntfy、Bark 都一样)都收不到后台横幅。
-> **快速判定**:换到蜂窝数据或开 VPN——若横幅恢复，就是那个 WiFi 在拦 APNs，
-> 换 adapter 没用，得从网络侧解决(放行 5223 / 用 VPN / 走蜂窝)。
-
-3. 把 `hooks/notification-settings.example.json` 的内容合并进你的 Claude Code settings
-   （用户级 `~/.claude/settings.json` 或项目级 `.claude/settings.json`），
-   `command` 用 `.venv/bin/cc-poke-notify` 的绝对路径。
-
-## 验证
+**3. Start the daemon:**
 
 ```bash
-echo '{"message":"hello from cc-poke","cwd":"/tmp"}' | /path/to/cc-poke/.venv/bin/cc-poke-notify
-```
-手机应收到一条标题为 `cc-poke: Claude needs you`、正文含 `hello from cc-poke` 的通知。
-
-## 设计与边界
-
-见 `docs/superpowers/specs/2026-06-18-cc-poke-design.md`。
-**起步 scope 钉死为"通知 + 远程批准"，不做会话托管平台。** 档1（手机远程批准）见 Phase 2。
-
-## Phase 2 — 档1 远程批准(remote approve)
-
-手机上点「批准/拒绝」,决定回传 VPS,Claude 直接继续,无需切回终端。
-
-### 组件
-- `cc-poke-daemon` —— 常驻服务:持有内存决定 store、推带按钮通知、暴露 `/webhook` 与决定网页 `/d`。
-- `cc-poke-approve` —— `PreToolUse` hook:拦截工具调用、查 allowlist、向 daemon 注册并阻塞等手机决定。
-
-### 1. 配置
-复制 `config.example.json` 到 `~/.config/cc-poke/config.json` 并填写:
-- `public_base_url`:反代后的公网地址(手机能访问)。
-- `webhook_secret`:`python -c "import secrets;print(secrets.token_urlsafe(24))"` 生成。
-- `allowlist`:正则数组,命中的 Bash 命令直接放行不推送(避免琐碎命令刷屏)。
-- `wait_seconds`:hook 等待手机的窗口(默认 300)。
-
-### 2. 起 daemon(systemd,低内存)
-```bash
-cp deploy/cc-poke-daemon.service ~/.config/systemd/user/
-systemctl --user daemon-reload
 systemctl --user enable --now cc-poke-daemon
 systemctl --user status cc-poke-daemon
 ```
-或裸跑:`/path/to/cc-poke/.venv/bin/cc-poke-daemon`。
 
-### 3. 反代(只暴露两个路径)
-把 `public_base_url` 指向的反代**仅**转发 `/webhook` 与 `/d` 到 `127.0.0.1:8787`;
-**不要**暴露 `/requests`(仅 hook 在 localhost 调用)。
+**4. Register the approve hook** — merge
+[`hooks/pretooluse-settings.example.json`](hooks/pretooluse-settings.example.json)
+into your settings, using the `cc-poke-approve` path.
 
-### 4. 注册 PreToolUse hook
-把 `hooks/pretooluse-settings.example.json` 的内容合并进你的 Claude Code `settings.json`。
-**关键**:hook 的 `timeout`(600s)必须大于 `wait_seconds`(300s),否则 CC 会在 cc-poke
-退回终端弹窗前就杀掉 hook。精确规则：hook `timeout` 必须满足 `timeout >= wait_seconds + 30`
-（approve 客户端自身的 HTTP 等待为 `wait_seconds + 15s`，加上推送/网络余量约 15s）。
-如需调大 `wait_seconds`，务必同步调大 `timeout`，否则 Claude Code 会在决定回调前强制终止 hook，
-导致回落到终端弹窗而非直接继续。
+> 远程批准需要 daemon + 反代。改 `public_base_url`；反代**只**放行 `/webhook` 和
+> `/d`，`/requests` 保持私有；起 daemon；注册 PreToolUse hook。
 
-### 5. 冒烟验证(E2E)
-1. daemon 已运行;手机已订阅 ntfy topic。
-2. 在交互式 `claude` 里触发一个不在 allowlist 的命令(如 `rm -rf /tmp/cc-poke-test`)。
-3. 手机收到带 Approve/Deny 的通知 → 点 Approve → 终端里 Claude 应直接继续(不弹终端审批)。
-4. 不点、等满 `wait_seconds` → 应退回终端弹窗。
+**Timeout rule.** The hook's `timeout` must be at least `wait_seconds + 30`,
+otherwise Claude Code kills the hook before cc-poke can fall back to the terminal
+prompt. If you raise `wait_seconds`, raise the hook `timeout` to match.
 
-### 安全说明
-公网上 `/webhook` 是「点一下就放行工具执行」的敏感端点。防护:`request_id` 不可猜
-(`secrets.token_urlsafe(32)`)+ 共享 `webhook_secret` + 一次性(决定后即失效)。
-请用 HTTPS,并妥善保管 `webhook_secret`。
-推送通知正文会携带工具/命令摘要，任何能读取 ntfy topic 的人都能看到 Claude 即将执行的内容——
-请将 ntfy topic 本身视为机密，并始终通过 HTTPS 连接 ntfy 服务端。
+> **超时规则**：hook 的 `timeout` 必须 ≥ `wait_seconds + 30`，否则 Claude Code 会在
+> cc-poke 退回终端弹窗前就杀掉 hook。调大 `wait_seconds` 时同步调大 `timeout`。
+
+**End-to-end check:** in an interactive `claude` session, run a command not in
+your allowlist (e.g. `rm -rf /tmp/cc-poke-test`). The phone gets a notification
+with Approve/Deny → tap Approve → the command runs without a terminal prompt.
+
+## Security / 安全
+
+- `/webhook` runs a tool when tapped, so it is a sensitive endpoint. It is
+  guarded by an unguessable `request_id`, the shared `webhook_secret` (compared
+  in constant time), and being one-shot — a decision is consumed once and the
+  request expires.
+- Serve everything over HTTPS and keep `webhook_secret` private.
+- Anyone who can read your ntfy topic can see the command in the notification
+  body. Treat the topic itself as a secret.
+- Expose only `/webhook` and `/d`. Never expose `/requests`.
+
+> `/webhook` 点一下就放行工具执行，是敏感端点：用不可猜的 `request_id` + 共享
+> `webhook_secret`（常数时间比较）+ 一次性（用过即失效）防护。全程 HTTPS，
+> `webhook_secret` 保密。能读你 ntfy topic 的人能看到命令内容，topic 本身要当机密。
+> 只暴露 `/webhook` 和 `/d`，绝不暴露 `/requests`。
+
+## Uninstall / 卸载
+
+```bash
+./uninstall.sh           # stop and remove the daemon unit
+./uninstall.sh --purge   # also remove the venv and config
+```
+
+It does not edit your Claude Code settings — remove the cc-poke hook entries
+yourself.
+
+> `uninstall.sh` 不会动你的 Claude Code 设置，hook 条目请自行删除。
+
+## Development / 开发
+
+```bash
+.venv/bin/python -m pip install -e ".[dev]"
+.venv/bin/python -m pytest -q
+```
+
+No runtime dependencies; the standard library only. Tests cover the config,
+adapters, decision store, daemon, hooks, and entry points.
+
+> 无运行时依赖，纯标准库。测试覆盖配置、适配器、决定 store、daemon、hook 和入口点。
+
+## License / 许可证
+
+MIT — see [LICENSE](LICENSE).
