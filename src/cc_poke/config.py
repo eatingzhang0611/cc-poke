@@ -27,6 +27,8 @@ class Config:
     webhook_secret: str = ""
     allowlist: tuple[str, ...] = ()
     wait_seconds: float = 300.0
+    bypass: bool = False
+    stop_quiet_seconds: float = 300.0
 
 
 def load_config(
@@ -70,6 +72,11 @@ def load_config(
         wait_seconds = float(data.get("wait_seconds", 300.0))
     except (TypeError, ValueError) as e:
         raise ConfigError(f'cc-poke config at {p} has invalid "wait_seconds": {e}') from e
+    bypass = bool(data.get("bypass", False))
+    try:
+        stop_quiet_seconds = float(data.get("stop_quiet_seconds", 300.0))
+    except (TypeError, ValueError) as e:
+        raise ConfigError(f'cc-poke config at {p} has invalid "stop_quiet_seconds": {e}') from e
     return Config(
         ntfy_server=server,
         ntfy_topic=str(topic) if topic is not None else "",
@@ -81,4 +88,6 @@ def load_config(
         webhook_secret=webhook_secret,
         allowlist=allowlist,
         wait_seconds=wait_seconds,
+        bypass=bypass,
+        stop_quiet_seconds=stop_quiet_seconds,
     )

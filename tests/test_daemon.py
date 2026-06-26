@@ -202,6 +202,24 @@ def test_dispatch_webhook_get_returns_404_and_leaves_pending():
     assert app.store.resolve(rid, "deny") is True
 
 
+def test_handle_request_includes_cwd_in_body():
+    from pathlib import Path
+    cwd = str(Path.home() / "workspace" / "cc-poke")
+    adapter = _FakeAdapter()
+    app = _app(adapter=adapter, wait=0.05)
+    app.handle_request("Bash", "ls", cwd=cwd)
+    body = adapter.calls[0]["body"]
+    assert "ls" in body
+    assert "~/workspace/cc-poke" in body
+
+
+def test_handle_request_no_cwd_body_unchanged():
+    adapter = _FakeAdapter()
+    app = _app(adapter=adapter, wait=0.05)
+    app.handle_request("Bash", "ls")
+    assert adapter.calls[0]["body"] == "ls"
+
+
 def test_from_config_requires_public_base_url_and_secret():
     with pytest.raises(ConfigError):
         DaemonApp.from_config(Config(ntfy_server="https://ntfy.sh", ntfy_topic="t"))

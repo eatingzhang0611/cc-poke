@@ -125,3 +125,27 @@ def test_bark_adapter_requires_device_key(tmp_path):
     p = _write(tmp_path, {"adapter": "bark"})
     with pytest.raises(ConfigError):
         load_config(path=p)
+
+
+def test_bypass_defaults_false(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "t"})
+    cfg = load_config(path=p)
+    assert cfg.bypass is False
+
+
+def test_bypass_parsed_true(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "t", "bypass": True})
+    cfg = load_config(path=p)
+    assert cfg.bypass is True
+
+
+def test_stop_quiet_seconds_default(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "t"})
+    cfg = load_config(path=p)
+    assert cfg.stop_quiet_seconds == 300.0
+
+
+def test_stop_quiet_seconds_parsed(tmp_path):
+    p = _write(tmp_path, {"ntfy_topic": "t", "stop_quiet_seconds": 120})
+    cfg = load_config(path=p)
+    assert cfg.stop_quiet_seconds == 120.0

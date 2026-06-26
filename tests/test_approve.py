@@ -121,6 +121,37 @@ def test_request_decision_non_2xx_returns_none():
     assert approve.request_decision(_cfg(), "Bash", {"command": "x"}, poster=fake_poster) is None
 
 
+def test_main_passes_cwd_to_daemon(monkeypatch):
+    captured = {}
+
+    def fake_request(config, tool_name, tool_input, cwd="", **kwargs):
+        captured["cwd"] = cwd
+        return "allow"
+
+    monkeypatch.setattr(approve, "load_config", lambda: _cfg())
+    monkeypatch.setattr(approve, "request_decision", fake_request)
+    payload = {"tool_name": "Bash", "tool_input": {"command": "ls"}, "cwd": "/home/yd/workspace"}
+    monkeypatch.setattr("sys.stdin", _Stdin(json.dumps(payload)))
+    approve.main()
+    assert captured["cwd"] == "/home/yd/workspace"
+
+
+def test_main_bypass_emits_allow_without_daemon(monkeypatch, capsys):
+    cfg = Config(ntfy_server="https://ntfy.sh", ntfy_topic="t",
+                 daemon_url="http://127.0.0.1:8787", allowlist=(), wait_seconds=1.0, bypass=True)
+    monkeypatch.setattr(approve, "load_config", lambda: cfg)
+
+    def _boom(*a, **k):
+        raise AssertionError("daemon must not be called in bypass mode")
+
+    monkeypatch.setattr(approve, "request_decision", _boom)
+    monkeypatch.setattr("sys.stdin", _Stdin(json.dumps({"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}})))
+    assert approve.main() == 0
+    out = json.loads(capsys.readouterr().out)
+    assert out["hookSpecificOutput"]["permissionDecision"] == "allow"
+    assert "bypass" in out["hookSpecificOutput"]["permissionDecisionReason"]
+
+
 class _Stdin:
     def __init__(self, text):
         self._text = text

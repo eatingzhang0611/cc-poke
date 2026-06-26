@@ -12,6 +12,7 @@ import json
 import urllib.parse
 from collections import namedtuple
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 from .adapters import make_adapter
 from .adapters.base import Action
@@ -107,7 +108,7 @@ class DaemonApp:
             raise ConfigError('daemon requires a non-empty "webhook_secret" in config')
         return cls(store=DecisionStore(), adapter=make_adapter(config), config=config)
 
-    def handle_request(self, tool_name: str, summary: str) -> str | None:
+    def handle_request(self, tool_name: str, summary: str, cwd: str = "") -> str | None:
         rid = self.store.register()
         base = self._config.public_base_url
         s = urllib.parse.quote(self._config.webhook_secret, safe="")
@@ -119,7 +120,12 @@ class DaemonApp:
         c = urllib.parse.quote(summary or "", safe="")
         click = f"{base}/d?id={rid}&s={s}&t={t}&c={c}"
         title = f"cc-poke: approve {tool_name or 'tool'}?"  # ASCII
-        if not self._adapter.send(title, summary or "(no detail)", actions, click=click):
+        body = summary or "(no detail)"
+        if cwd:
+            home = str(Path.home())
+            short = ("~" + cwd[len(home):]) if cwd.startswith(home) else cwd
+            body = f"{body}\n({short})"
+        if not self._adapter.send(title, body, actions, click=click):
             self.store.cancel(rid)
             return None
         return self.store.wait(rid, self._config.wait_seconds)
@@ -165,7 +171,7 @@ class DaemonApp:
                 data = json.loads(body or b"{}")
             except Exception:
                 data = {}
-            decision = self.handle_request(str(data.get("tool_name", "")), str(data.get("summary", "")))
+            decision = self.handle_request(str(data.get("tool_name", "")), str(data.get("summary", "")), str(data.get("cwd", "")))
             return Response(200, "application/json", json.dumps({"decision": decision}).encode("utf-8"))
         if path == "/webhook" and method == "POST":
             _, page = self.handle_webhook(params.get("id", ""), params.get("d", ""), params.get("s", ""))

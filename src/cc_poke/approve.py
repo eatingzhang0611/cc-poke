@@ -64,9 +64,9 @@ def _default_poster(url: str, data: bytes, timeout: float) -> tuple[int, bytes]:
         return int(resp.status), resp.read()
 
 
-def request_decision(config, tool_name, tool_input, *, poster=_default_poster) -> str | None:
+def request_decision(config, tool_name, tool_input, cwd: str = "", *, poster=_default_poster) -> str | None:
     summary = build_summary(tool_name, tool_input)
-    payload = json.dumps({"tool_name": tool_name, "summary": summary}).encode("utf-8")
+    payload = json.dumps({"tool_name": tool_name, "summary": summary, "cwd": cwd}).encode("utf-8")
     url = f"{config.daemon_url}/requests"
     status, body = poster(url, payload, config.wait_seconds + 15.0)
     if not (200 <= status < 300):
@@ -91,6 +91,7 @@ def main() -> int:
         payload = {}
     tool_name = str(payload.get("tool_name", ""))
     tool_input = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+    cwd = str(payload.get("cwd", ""))
 
     try:
         config = load_config()
@@ -98,12 +99,16 @@ def main() -> int:
         _log(f"config error: {e}")
         return 0  # no decision -> terminal popup
 
+    if config.bypass:
+        emit_decision("allow", "cc-poke bypass")
+        return 0
+
     if is_allowlisted(tool_name, tool_input, config.allowlist):
         emit_decision("allow", "cc-poke allowlist")
         return 0
 
     try:
-        decision = request_decision(config, tool_name, tool_input)
+        decision = request_decision(config, tool_name, tool_input, cwd)
     except Exception as e:  # noqa: BLE001 — never block Claude
         _log(f"approve error: {e!r}")
         return 0  # no decision -> terminal popup
